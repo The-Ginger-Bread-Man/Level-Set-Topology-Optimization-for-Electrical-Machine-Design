@@ -24,5 +24,5 @@ red = Internal features
 ## **Contact For Colaboration**
 alex stewart - University of Bristol - alexander.stewart@bristol.ac.uk 
 
-## **Program**
+## **Software**
 OneLab - https://www.onelab.info/
