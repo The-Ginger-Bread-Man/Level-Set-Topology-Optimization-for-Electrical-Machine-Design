@@ -163,19 +163,21 @@ Function {
   Dam = 0.95;
   a1 = 1.35E-03; a2 = 1.378426182; a3 = 6.87E-06 ; a4 = 0.195520764;
   Bl[]     = (a1*($1^(a2)))/(1+a3*($1^a4));
-  damage[] = (1-Dam*Exp[-Max[Bl[Min[$1,500]],0.01]*$2*1e-0]);
+  damage[] = 1;//(1-Dam*Exp[-Max[Bl[Min[$1,500]],0.01]*$2*1e-0]);
 
-  Mat_core_b = {
-      0, 0.030000,0.060000,0.120000,0.190000,0.230000,0.580000,
-      0.770000,0.950000,1.130000,1.310000,1.490000,1.690000,
-	  1.830000,1.920000,1.980000,2.030000,2.080000,2.150000,
-	  2.210000,2.290000,2.330000};
-  Mat_core_h = {
-      0.000000,93.000000,165.000000,284.000000,399.000000,
-	  457.000000,1104.000000,1594.000000,2306.000000,3606.000000,
-	  6468.000000,12904.000000,26799.000000,49770.000000,
-	  74770.000000,99770.000000,124770.000000,149770.000000,
-	  189770.000000,229770.000000,279770.000000,304770.000000};
+  Mat_core_b = {0.00,0.10,0.20,0.30,0.40,0.50,0.62,0.69,0.79,0.90,
+                1.03,1.10,1.20,1.30,1.40,1.50,1.60,1.70,1.80,1.90,
+                2.00,2.10,2.20,2.30,2.40};
+  Mat_core_h = {0.00,18.40,23.00,26.70,30.10,33.30,37.32,40.10,
+                44.31,50.31,59.55,68.00,90.00,150.00,330.00,700.00,
+                1500.00,3100.00,6100.00,12000.00,22000.00,38000.00,
+                66000.00,112000.00,190000.00};
+  Mat_core_e = { 0,0.930093568,0.690155294,0.921780517,1.190597382,
+      1.439581446,2.242891586,1.813653127,3.118057398,5.082527191,
+      8.923473885,8.992280468,25.3652621,75.28491318,243.8188929,
+      536.8259719,1237.513562,2635.104798,5241.347715,10912.91629,
+      19522.09907,32787.80854,60097.41557,103329.6745,183193.4887};
+
   Mat_core_b2 = Mat_core_b()^2;
   Mat_core_h2 = Mat_core_h()^2;
   Mat_core_nu = Mat_core_h() / Mat_core_b();
@@ -194,7 +196,13 @@ Function {
   nu[ Region[{Core}] ]  		= nu_core[$1]*1/damage[Norm[h_core[$1] ],$2];
   dhdb[ Region[{Core}] ] 		= dhdb_core[$1]*1/damage[Norm[h2_core[$1] ],$2];
   CS [ Region[{Iron}]] = 0;
-  
+
+  /* Magnetic Energy */
+  Mat_core_e_b2  = ListAlt[Mat_core_b2(), Mat_core_e()] ;
+  e_core[Region[{Iron}]] = InterpolationAkima[ SquNorm[$1] ]{ Mat_core_e_b2() };// *damage[Norm[h_core[$1] ],$2];// 0.5* h_core[$1]*$1;
+  e_core[Region[{Volume_Other}]] = 0.5*nu[]*$1*$1;
+
+  /* Torque */
   RotatePZ[] = Rotate[ Vector[$X,$Y,$Z], 0, 0, $1 ] ;
   TM[] = ( SquDyadicProduct[$1] - SquNorm[$1] * TensorDiag[0.5, 0.5, 0.5] ) / (1/nu[]) ;
   
@@ -633,6 +641,7 @@ PostProcessing {
            In ElementsOf[Surface_AGC_1, OnOneSideOf MB];
 	   Jacobian JacVol ; Integration Int ; }
        }}
+     { Name CoEnergy; Value {Term {[e_core[{d a},{dis}]*0.05];In VolumeAll; Jacobian JacVol; }} }
     }
 }
 /*Defenition of Mechanical equations*/ 
@@ -660,7 +669,8 @@ PostProcessing {
 PostOperation {
   { Name Map; NameOfPostProcessing Sys_Mag_2D;
     Operation {
-      Print[ b, OnElementsOf CoreAll, File StrCat["b",AngleSTR,".pos"] ];
+      //Print[ b, OnElementsOf CoreAll, File StrCat["b",AngleSTR,".pos"] ];
+      Print[ CoEnergy, OnElementsOf CoreAll, File StrCat["b",AngleSTR,".pos"] ];
       Print[ a, OnElementsOf CoreAll, File StrCat["a",AngleSTR,".pos"] ];
       Print[ CurrentStream, OnElementsOf Conductors, File StrCat["stream.pos"] ];
       Print[ AREA, OnElementsOf Conductors, File StrCat["stream.pos"] ];
